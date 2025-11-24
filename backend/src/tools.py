@@ -77,7 +77,7 @@ class TransactionStatusTool(BaseTool):
             
             report = "--- HISTÓRICO RECENTE ---\n"
             for t in res.data:
-                report += f"{status_icon} Data: {t['date']} | Valor: {t['amount']} | Status: {t['status']} | Motivo: {t.get('reason_failure', '-')}\n"
+                report += f"Data: {t['date']} | Valor: {t['amount']} | Status: {t['status']} | Motivo: {t.get('reason_failure', '-')}\n"
             return report
         except Exception as e:
             return f"Erro DB: {e}"
