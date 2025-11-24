@@ -4,5 +4,7 @@ uvicorn
 python-dotenv
 supabase
 requests
+duckduckgo-search>=6.0.0
 langchain-google-genai
 langchain-community
+crewai-tools

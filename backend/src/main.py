@@ -2,18 +2,26 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from crewai import Crew, Process
+from crewai import Crew, Process, LLM
 from src.agents import InfinitePayAgents
 from src.tasks import InfinitePayTasks
 from dotenv import load_dotenv
 
 load_dotenv()
 
+manager_llm = LLM(
+    model="gemini/gemini-2.5-flash",
+    api_key=os.getenv("GOOGLE_API_KEY")
+)
+
 class MessageInput(BaseModel):
     message: str
     user_id: str = "client789"
 
-app = FastAPI(title="InfinitePay Agent")
+app = FastAPI(
+    title="InfinitePay Agent Swarm",
+    description="API do Desafio Técnico - Arquitetura de Agentes"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,34 +34,34 @@ app.add_middleware(
 @app.post("/api/chat")
 async def chat_endpoint(payload: MessageInput):
     try:
-        inputs = {
-            "query": payload.message,
-            "user_id": payload.user_id
-        }
-
         agents_factory = InfinitePayAgents()
-        universal_agent = agents_factory.universal_agent()
-
         tasks_factory = InfinitePayTasks()
-        task = tasks_factory.handle_user_request_task(universal_agent)
+
+        router = agents_factory.router_agent()
+        knowledge = agents_factory.knowledge_agent()
+        support = agents_factory.support_agent()
+
+        main_task = tasks_factory.router_task(router, payload.message, payload.user_id)
 
         crew = Crew(
-            agents=[universal_agent],
-            tasks=[task],
-            process=Process.sequential, 
+            agents=[router, knowledge, support],
+            tasks=[main_task],
+            process=Process.hierarchical, 
+            manager_llm=manager_llm,
             verbose=True,
-            memory=False
+            memory=False 
         )
 
-        result = crew.kickoff(inputs=inputs)
+        result = crew.kickoff()
 
         return {
             "response": result,
+            "processed_by": "InfinitePay Swarm",
             "status": "success"
         }
 
     except Exception as e:
-        print(f"ERRO: {e}")
+        print(f"ERRO CRÍTICO: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

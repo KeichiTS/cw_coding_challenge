@@ -1,36 +1,57 @@
 from crewai import Agent, LLM
-from src.tools import KnowledgeBaseTool, CustomerSupportTool
+# 1. IMPORTAMOS AS FERRAMENTAS DE DELEGAÇÃO E AS ESPECÍFICAS
+from src.tools import (
+    DelegateToKnowledgeTool,
+    DelegateToSupportTool,
+    InfinitePayKnowledgeTool, 
+    TransactionStatusTool, 
+    AccountDetailsTool,
+    serper_tool_instance
+)
 import os
 from dotenv import load_dotenv 
 
+
 load_dotenv()
+
 
 class InfinitePayAgents:
     def __init__(self):
         self.llm = LLM(
-            model="gemini/gemini-2.5-flash",
+            model="gemini/gemini-2.5-flash", 
             api_key=os.getenv("GOOGLE_API_KEY")
         )
 
-    def universal_agent(self):
-        knowledge_tool = KnowledgeBaseTool()
-        support_tool = CustomerSupportTool()
-
+    def router_agent(self):
         return Agent(
-            role='InfinitePay Assistant',
-            goal='Resolver a dúvida do usuário utilizando a ferramenta correta.',
-            backstory=(
-                "Você é o assistente oficial da InfinitePay. Você é inteligente e autônomo. "
-                "Você tem acesso a duas ferramentas poderosas:\n"
-                "1. 'InfinitePay Knowledge Base': Para qualquer dúvida sobre taxas, como funciona, preços.\n"
-                "2. 'Customer Database Tool': Para verificar problemas na conta de um cliente específico.\n\n"
-                "SEU PROCESSO DE PENSAMENTO:\n"
-                "- O usuário perguntou sobre taxas? -> Uso a Knowledge Base.\n"
-                "- O usuário reclamou de erro/conta? -> Verifico se tenho o ID. Se tiver, uso a Database Tool.\n"
-                "Responda sempre de forma cordial e em Português."
-            ),
-            tools=[knowledge_tool, support_tool],
+            role='Router Agent',
+            goal='Usar as ferramentas de chamada para redirecionar a pergunta.',
+            backstory= "Você é um agente delegador. Você não resolve nada. Você apenas escolhe a ferramenta certa e repassa o texto.",
+            allow_delegation=False,
+            tools=[DelegateToKnowledgeTool(), DelegateToSupportTool()],
             verbose=True,
-            allow_delegation=False, 
+            llm=self.llm
+        )
+
+    def knowledge_agent(self):
+        return Agent(
+            role='Knowledge Agent',
+            goal='Fornecer informações precisas usando a documentação oficial ou busca web.',
+            backstory="Você é o especialista em produtos e informações gerais. Use suas ferramentas para buscar a verdade.",
+            tools=[InfinitePayKnowledgeTool(), serper_tool_instance],
+            verbose=True,
+            allow_delegation=False,
+            llm=self.llm
+        )
+
+    def support_agent(self):
+        return Agent(
+            role='Support Agent',
+            goal='Resolver problemas técnicos e de conta verificando dados do cliente.',
+            backstory="Você é o suporte nível 2. Você lida com falhas, bloqueios e status.",
+            # 5. As ferramentas de banco de dados
+            tools=[TransactionStatusTool(), AccountDetailsTool()],
+            verbose=True,
+            allow_delegation=False,
             llm=self.llm
         )
