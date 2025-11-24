@@ -1,5 +1,4 @@
 from crewai import Agent, LLM
-# 1. IMPORTAMOS AS FERRAMENTAS DE DELEGAÇÃO E AS ESPECÍFICAS
 from src.tools import (
     DelegateToKnowledgeTool,
     DelegateToSupportTool,
@@ -49,7 +48,6 @@ class InfinitePayAgents:
             role='Support Agent',
             goal='Resolver problemas técnicos e de conta verificando dados do cliente.',
             backstory="Você é o suporte nível 2. Você lida com falhas, bloqueios e status.",
-            # 5. As ferramentas de banco de dados
             tools=[TransactionStatusTool(), AccountDetailsTool()],
             verbose=True,
             allow_delegation=False,

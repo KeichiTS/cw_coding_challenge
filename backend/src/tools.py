@@ -8,18 +8,15 @@ from crewai_tools import SerperDevTool
 
 load_dotenv()
 
-# --- 1. CONFIGURAÇÃO DO SERPER (Busca Web) ---
-# Configuramos aqui para ser reutilizada
 serper_tool_instance = SerperDevTool(
-    search_url="https://google.serper.dev/news", # Modo Notícias
+    search_url="https://google.serper.dev/news",
     n_results=5,
     country="br",
     locale="pt-br",
     location="Sao Paulo, Brazil",
-    tbs="qdr:d" # Filtro de 24h
+    tbs="qdr:d"
 )
 
-# Wrapper para garantir que o agente envie 'query' e não se confunda
 class WebSearchTool(BaseTool):
     name: str = "Web Search Tool"
     description: str = (
@@ -29,12 +26,10 @@ class WebSearchTool(BaseTool):
 
     def _run(self, query: str) -> str:
         try:
-            # O SerperDevTool original espera 'search_query', mas o agente costuma mandar 'query'
             return serper_tool_instance.run(search_query=query)
         except Exception as e:
             return f"Erro na busca web: {str(e)}"
 
-# --- 2. FERRAMENTAS DA INFINITEPAY ---
 
 class InfinitePayKnowledgeTool(BaseTool):
     name: str = "InfinitePay Documentation Search"
@@ -75,7 +70,6 @@ class TransactionStatusTool(BaseTool):
     def _run(self, user_id: str) -> str:
         try:
             supabase: Client = create_client(os.getenv("SUPABASE_URL"), os.getenv("SUPABASE_KEY"))
-            # Busca transações recentes
             res = supabase.table("transactions").select("*").eq("user_id", user_id).order("date", desc=True).limit(3).execute()
             
             if not res.data:
@@ -83,7 +77,6 @@ class TransactionStatusTool(BaseTool):
             
             report = "--- HISTÓRICO RECENTE ---\n"
             for t in res.data:
-                status_icon = "✅" if t['status'] == 'approved' else "❌"
                 report += f"{status_icon} Data: {t['date']} | Valor: {t['amount']} | Status: {t['status']} | Motivo: {t.get('reason_failure', '-')}\n"
             return report
         except Exception as e:
@@ -106,21 +99,18 @@ class AccountDetailsTool(BaseTool):
         except Exception as e:
             return f"Erro DB: {e}"
 
-# --- 3. FERRAMENTAS DE DELEGAÇÃO (Agents as Tools) ---
 
 class DelegateToKnowledgeTool(BaseTool):
     name: str = "Call Knowledge Agent"
     description: str = "Delegar perguntas sobre Taxas, Produtos ou Notícias. Entrada: A pergunta."
 
     def _run(self, question: str) -> str:
-        # CORREÇÃO: Usando 1.5-flash-latest para evitar erro 404 e cota
         llm = LLM(model="gemini/gemini-2.5-flash", api_key=os.getenv("GOOGLE_API_KEY"))
         
         agent = Agent(
             role='Knowledge Agent',
             goal='Responder a pergunta usando RAG ou Web Search.',
             backstory='Especialista em produtos InfinitePay e conhecimentos gerais.',
-            # Usa a WebSearchTool (wrapper) e a KnowledgeTool
             tools=[InfinitePayKnowledgeTool(), WebSearchTool()],
             llm=llm,
             verbose=True
@@ -145,7 +135,6 @@ class DelegateToSupportTool(BaseTool):
         except:
             return "Erro de formato. Use: user_id|pergunta"
 
-        # CORREÇÃO: Usando 1.5-flash-latest
         llm = LLM(model="gemini/gemini-2.5-flash", api_key=os.getenv("GOOGLE_API_KEY"))
         
         agent = Agent(

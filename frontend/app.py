@@ -9,7 +9,6 @@ API_URL = os.getenv("API_URL", "http://backend:8000/api/chat")
 
 if "user_id" not in st.session_state:
     st.session_state.user_id = "client789"  
-# -------------------------------
 
 st.sidebar.write(f"User ID: `{st.session_state.user_id}`")
 
