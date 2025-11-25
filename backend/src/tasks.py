@@ -17,6 +17,9 @@ class InfinitePayTasks:
                 "   -> AÇÃO: Execute 'Call Knowledge Agent'.\n\n"
                 "2. CASO SUPPORT (Erros, Conta, Transações):\n"
                 "   -> AÇÃO: Execute 'Call Support Agent' com input '{user_id}|{query}'.\n\n"
+                "3. CASO ESCALATION (Cliente bravo, pede atendente, reclamação grave):\n"
+                "   -> AÇÃO: Execute a ferramenta 'Call Human Hand-off'.\n"
+                "   -> INPUT: '{user_id}|{query}' (Use a barra vertical).\n\n"
                 "IMPORTANTE: Não altere o texto que a ferramenta retornar. "
                 "Mantenha a formatação Markdown (Tabelas, Negritos) exatamente como vier."
             ),

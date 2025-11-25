@@ -91,7 +91,7 @@ async def chat_endpoint(payload: MessageInput, background_tasks: BackgroundTasks
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/history/{session_id}")
-async def get_history(session_id: str, user_id: str): # <--- Adicionamos user_id aqui
+async def get_history(session_id: str, user_id: str):
     """
     Recupera o histórico se o session_id pertencer ao user_id informado.
     """

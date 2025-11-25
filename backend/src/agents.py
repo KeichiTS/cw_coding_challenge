@@ -2,6 +2,7 @@ from crewai import Agent, LLM
 from src.tools import (
     DelegateToKnowledgeTool,
     DelegateToSupportTool,
+    DelegateToEscalationTool,
     InfinitePayKnowledgeTool, 
     TransactionStatusTool, 
     AccountDetailsTool,
@@ -30,10 +31,11 @@ class InfinitePayAgents:
                 "Sua única responsabilidade é analisar a mensagem e acionar a ferramenta correta:\n"
                 "- Se for dúvida/info/notícias -> Use 'Call Knowledge Agent'.\n"
                 "- Se for problema/conta/erro -> Use 'Call Support Agent'.\n"
+                "- Se o cliente estiver IRRITADO, xingando ou pedir HUMANO -> Use 'Call Human Hand-off'.\n"
                 "IMPORTANTE: Você NÃO responde a dúvida diretamente. Você DELEGA usando suas ferramentas."
             ),
             allow_delegation=False,
-            tools=[DelegateToKnowledgeTool(), DelegateToSupportTool()],
+            tools=[DelegateToKnowledgeTool(), DelegateToSupportTool(), DelegateToEscalationTool()],
             verbose=True,
             llm=self.llm
         )
