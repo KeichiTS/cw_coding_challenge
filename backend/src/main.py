@@ -6,6 +6,7 @@ from crewai import Crew, Process
 from supabase import create_client, Client
 from src.agents import InfinitePayAgents
 from src.tasks import InfinitePayTasks
+from src.guardrails import input_guardrail
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -44,6 +45,21 @@ def log_message(session_id: str, user_id: str, direction: str, message: str):
 @app.post("/api/chat")
 async def chat_endpoint(payload: MessageInput, background_tasks: BackgroundTasks):
     try:
+        
+        is_safe, refusal_message = input_guardrail(payload.message)
+        
+        if not is_safe:
+            background_tasks.add_task(
+                log_message, payload.session_id, payload.user_id, "user", payload.message
+            )
+            background_tasks.add_task(
+                log_message, payload.session_id, payload.user_id, "assistant", f"[BLOCKED]: {refusal_message}"
+            )
+            
+            return {
+                "response": refusal_message,
+                "status": "blocked"
+            }
         
         background_tasks.add_task(
             log_message, 

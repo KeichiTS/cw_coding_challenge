@@ -37,7 +37,8 @@ class InfinitePayAgents:
             allow_delegation=False,
             tools=[DelegateToKnowledgeTool(), DelegateToSupportTool(), DelegateToEscalationTool()],
             verbose=True,
-            llm=self.llm
+            llm=self.llm,
+            max_iter=1
         )
 
     def knowledge_agent(self):

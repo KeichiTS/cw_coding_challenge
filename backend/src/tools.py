@@ -283,7 +283,8 @@ class DelegateToEscalationTool(BaseTool):
             ),
             tools=[SendEmailTool()],
             llm=llm,
-            verbose=True
+            verbose=True,
+            max_iter=1
         )
         
         task = Task(
