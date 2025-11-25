@@ -115,20 +115,69 @@ Access the services:
 
 The solution includes a Streamlit frontend specifically designed for integration testing, allowing the simulation of different user contexts via the sidebar.
 
+## Testing Strategy
+
+The solution includes a Streamlit frontend specifically designed for integration testing. Below are the verified outputs for the core requirements.
+
 ### Test Cases:
 
-1.  **RAG Retrieval:**
-    * **Input:** "What are the fees for Maquininha Smart?"
-    * **Validation:** PREENCHER
+#### 1. RAG Retrieval (Knowledge Agent)
+* **Input:** `"What are the fees of the Maquininha Smart?"`
+* **Validation:** The agent must retrieve the data from the Vector Store and format it using Markdown tables.
+    ```text
+    The Maquininha Smart has a purchase cost and various transaction fees that depend on your monthly sales volume.
 
-2.  **SQL Data Access:**
-    * **Input:** "Why did my transaction fail?" (Set User ID: `client789`)
-    * **Validation:** PREENCHER
+    ### Transaction Fees (Maquininha & InfiniteTap)
+    | Sales Volume (Monthly) | Pix | Debit | Credit (1x) | Credit (12x) |
+    | :--- | :--- | :--- | :--- | :--- |
+    | Above R$ 80,000 | GRÁTIS | 0.75% | 2.69% | 8.99% |
+    | Above R$ 40,000 | GRÁTIS | 0.79% | 2.79% | 9.56% |
+    | Above R$ 20,000 | GRÁTIS | 0.85% | 2.89% | 10.12% |
+    | Up to R$ 20,000 | GRÁTIS | 1.37% | 3.15% | 12.40% |
 
-3.  **External Search:**
-    * **Input:** "Who won the last Palmeiras match?"
-    * **Validation:** PREENCHER
+    Source: [Confira todas as taxas da InfinitePay](https://www.infinitepay.io/taxas)
+    ```
 
-4.  **Language Adaptation:**
-    * **Input:** "Minha transação falhou"
-    * **Validation:** PREENCHER
+#### 2. SQL Data Access (Support Agent)
+* **Input:** `"Why did my transaction fail?"` (User ID: `client789`)
+* **Validation:** The agent must query the SQL database, identify the specific failure reason, and explain it empathetically without exposing raw JSON code.
+    ```text
+    Hello! I checked your transaction history to understand what happened.
+
+    The transaction of R$ 1,200.00 was not completed because, at that moment, there were insufficient funds in your account.
+
+    I recommend checking your available balance before trying again. If you need any help topping up your account, I'm here to help!
+    ```
+
+#### 3. External Search (Web Tool)
+* **Input:** `"Quais as principais notícias de São Paulo hoje?"`
+* **Validation:** The agent must recognize that this is not an InfinitePay product question, switch to the Web Search tool, and provide real-time news with sources.
+    ```text
+    As principais notícias de São Paulo hoje incluem:
+
+    ### Violência e Criminalidade
+    * A polícia investiga a identidade dos homens vistos saindo da casa de um cabeleireiro encontrado morto. (Fonte: g1 São Paulo)
+    * Um homem foi preso após manter os filhos reféns em Campinas. (Fonte: CNN Brasil)
+
+    ### Previsão do Tempo
+    * São Paulo pode ter chuva intensa de até 100mm e ventos de 50 a 100 km/h. (Fonte: CNN Brasil)
+    * A previsão para terça-feira (25) indica um dia amanhecendo chuvoso. (Fonte: Agência SP)
+
+    Fontes:
+    - [g1 São Paulo](https://g1.globo.com/sp/sao-paulo/)
+    - [CNN Brasil](https://www.cnnbrasil.com.br/)
+    ```
+
+#### 4. Language Adaptation (Polyglot)
+* **Input:** `"Quais foram os valores da minha ultimas transações?"`
+* **Validation:** The agent must detect the Portuguese language and return the SQL data report completely in Portuguese.
+    ```text
+    Olá! Entendo que você gostaria de saber sobre suas últimas transações. Fiz uma verificação:
+
+    1. R$ 150,00 - Aprovada.
+    2. R$ 1.200,00 - Não concluída (Saldo Insuficiente).
+    3. R$ 50,00 - Falha (Bloqueio temporário de segurança).
+    4. R$ 25,00 - Aprovada.
+
+    Para resolver o bloqueio da transação de R$ 50,00, por favor, entre em contato com nossa equipe de segurança.
+    ```
