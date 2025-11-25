@@ -3,20 +3,25 @@ from crewai import Task
 class InfinitePayTasks:
     
     def router_task(self, agent, query, user_id):
+        
+        current_date = "24 de novembro de 2025"
+
         return Task(
             description=(
-                f"Mensagem recebida: '{query}' (User ID: {user_id})\n\n"
-                "Sua missão é acionar o agente correto usando SUAS FERRAMENTAS.\n\n" \
-                "Hoje é 24 de novembro de 2025 \n\n"
+                f"Mensagem recebida: '{query}' (User ID: {user_id})\n"
+                f"Data atual: {current_date}\n\n"
+                "Sua missão é atuar como um ROTEADOR INTELIGENTE.\n"
+                "Você deve identificar o tópico e chamar a ferramenta correta.\n\n"
                 "REGRA DE DECISÃO:\n"
-                "1. Se o assunto for notícias, futebol, clima, taxas ou produtos:\n"
-                "   -> USE A FERRAMENTA: 'Call Knowledge Agent'.\n"
-                "   -> Input da ferramenta: A pergunta exata do usuário.\n\n"
-                "2. Se o assunto for conta bloqueada, erro, transação ou login:\n"
-                "   -> USE A FERRAMENTA: 'Call Support Agent'.\n"
-                "   -> Input da ferramenta: '{user_id}|{query}'\n\n"
-                "ATENÇÃO: Não tente responder. Não tente delegar nativamente. USE A FERRAMENTA."
+                "1. CASO KNOWLEDGE (Taxas, Produtos, Dúvidas Gerais):\n"
+                "   -> AÇÃO: Execute 'Call Knowledge Agent'.\n\n"
+                "2. CASO SUPPORT (Erros, Conta, Transações):\n"
+                "   -> AÇÃO: Execute 'Call Support Agent' com input '{user_id}|{query}'.\n\n"
+                "IMPORTANTE: Não altere o texto que a ferramenta retornar. "
+                "Mantenha a formatação Markdown (Tabelas, Negritos) exatamente como vier."
             ),
             agent=agent,
-            expected_output="A resposta final em texto trazida pela ferramenta.",
+            expected_output=(
+                "O conteúdo exato retornado pela ferramenta, preservando toda a formatação Markdown."
+            ),
         )

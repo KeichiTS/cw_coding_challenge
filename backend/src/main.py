@@ -2,17 +2,12 @@ import os
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from crewai import Crew, Process, LLM
+from crewai import Crew, Process
 from src.agents import InfinitePayAgents
 from src.tasks import InfinitePayTasks
 from dotenv import load_dotenv
 
 load_dotenv()
-
-manager_llm = LLM(
-    model="gemini/gemini-2.5-flash",
-    api_key=os.getenv("GOOGLE_API_KEY")
-)
 
 class MessageInput(BaseModel):
     message: str
@@ -20,7 +15,7 @@ class MessageInput(BaseModel):
 
 app = FastAPI(
     title="InfinitePay Agent Swarm",
-    description="API do Desafio Técnico - Arquitetura de Agentes"
+    description="API do Desafio Técnico - Arquitetura Sovereign Router"
 )
 
 app.add_middleware(
@@ -36,18 +31,15 @@ async def chat_endpoint(payload: MessageInput):
     try:
         agents_factory = InfinitePayAgents()
         tasks_factory = InfinitePayTasks()
-
+        
         router = agents_factory.router_agent()
-        knowledge = agents_factory.knowledge_agent()
-        support = agents_factory.support_agent()
-
+        
         main_task = tasks_factory.router_task(router, payload.message, payload.user_id)
 
         crew = Crew(
-            agents=[router, knowledge, support],
+            agents=[router], 
             tasks=[main_task],
-            process=Process.hierarchical, 
-            manager_llm=manager_llm,
+            process=Process.sequential, 
             verbose=True,
             memory=False 
         )
@@ -55,13 +47,15 @@ async def chat_endpoint(payload: MessageInput):
         result = crew.kickoff()
 
         return {
-            "response": result,
-            "processed_by": "InfinitePay Swarm",
+            "response": str(result),
+            "processed_by": "InfinitePay Swarm (Router -> Tool)",
             "status": "success"
         }
 
     except Exception as e:
         print(f"ERRO CRÍTICO: {e}")
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":

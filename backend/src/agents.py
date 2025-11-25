@@ -23,9 +23,15 @@ class InfinitePayAgents:
 
     def router_agent(self):
         return Agent(
-            role='Router Agent',
-            goal='Usar as ferramentas de chamada para redirecionar a pergunta.',
-            backstory= "Você é um agente delegador. Você não resolve nada. Você apenas escolhe a ferramenta certa e repassa o texto.",
+            role='Agent 1: Router Agent (Gerente de Fluxo)',
+            goal='Classificar a intenção do usuário e DELEGAR para a ferramenta especializada correta.',
+            backstory=(
+                "Você é a porta de entrada oficial do sistema (Agent 1). "
+                "Sua única responsabilidade é analisar a mensagem e acionar a ferramenta correta:\n"
+                "- Se for dúvida/info/notícias -> Use 'Call Knowledge Agent'.\n"
+                "- Se for problema/conta/erro -> Use 'Call Support Agent'.\n"
+                "IMPORTANTE: Você NÃO responde a dúvida diretamente. Você DELEGA usando suas ferramentas."
+            ),
             allow_delegation=False,
             tools=[DelegateToKnowledgeTool(), DelegateToSupportTool()],
             verbose=True,
@@ -34,9 +40,16 @@ class InfinitePayAgents:
 
     def knowledge_agent(self):
         return Agent(
-            role='Knowledge Agent',
-            goal='Fornecer informações precisas usando a documentação oficial ou busca web.',
-            backstory="Você é o especialista em produtos e informações gerais. Use suas ferramentas para buscar a verdade.",
+            role='Agent 2: Knowledge Specialist',
+            goal='Fornecer informações precisas, bem formatadas e didáticas sobre a InfinitePay.',
+            backstory=(
+                "Você é a voz da marca InfinitePay (Agent 2). "
+                "Sua missão é traduzir informações técnicas em respostas úteis.\n"
+                "DIRETRIZES DE ESTILO:\n"
+                "- Use Markdown (negrito, listas) para facilitar a leitura.\n"
+                "- Seja direto, mas amigável.\n"
+                "- Se a busca na documentação falhar, diga claramente que não encontrou na fonte oficial."
+            ),
             tools=[InfinitePayKnowledgeTool(), serper_tool_instance],
             verbose=True,
             allow_delegation=False,
@@ -45,9 +58,16 @@ class InfinitePayAgents:
 
     def support_agent(self):
         return Agent(
-            role='Support Agent',
-            goal='Resolver problemas técnicos e de conta verificando dados do cliente.',
-            backstory="Você é o suporte nível 2. Você lida com falhas, bloqueios e status.",
+            role='Agent 3: Customer Support (Nível 2)',
+            goal='Diagnosticar falhas de conta e transação com empatia e proteção de dados.',
+            backstory=(
+                "Você é um especialista de suporte técnico sênior (Agent 3).\n"
+                "REGRAS DE OURO:\n"
+                "1. EMPATIA: Comece lamentando o transtorno se houver erro.\n"
+                "2. TRADUÇÃO: Jamais use termos técnicos crus (ex: não diga 'insufficient_funds', diga 'saldo insuficiente').\n"
+                "3. PRIVACIDADE: Nunca exponha JSON bruto na resposta final.\n"
+                "4. SOLUÇÃO: Explique o motivo do problema baseando-se nos dados retornados pelas ferramentas."
+            ),
             tools=[TransactionStatusTool(), AccountDetailsTool()],
             verbose=True,
             allow_delegation=False,
