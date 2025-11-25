@@ -75,7 +75,7 @@ The system relies on a PostgreSQL database managed by Supabase. Below is the sch
   - `users`: `user_id` (string), `name`, `email`, `account_status` (active/blocked).
   - `transactions`: `id`, `user_id`, `amount`, `status` (approved/failed), `reason_failure`, `date`.
 
-### 3. Chat Persistence (Memory & Handoff)
+#### 3. Chat Persistence (Memory & Handoff)
 
 - Table: chat_logs
 - Usage: Stores every interaction for frontend session reload and for the Escalation Agent to generate email summaries.
@@ -171,10 +171,6 @@ Access the services:
 
 The solution includes a Streamlit frontend specifically designed for integration testing, allowing the simulation of different user contexts via the sidebar.
 
-## Testing Strategy
-
-The solution includes a Streamlit frontend specifically designed for integration testing. Below are the verified outputs for the core requirements.
-
 ### Test Cases:
 
 #### 1. RAG Retrieval (Knowledge Agent)
@@ -237,4 +233,5 @@ The solution includes a Streamlit frontend specifically designed for integration
 
     Para resolver o bloqueio da transação de R$ 50,00, por favor, entre em contato com nossa equipe de segurança.
     ```
+
 
