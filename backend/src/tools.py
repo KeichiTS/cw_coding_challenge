@@ -238,8 +238,8 @@ class SendEmailTool(BaseTool):
                     <p>O Agente Swarm identificou uma situação crítica.</p>
                     
                     <div style="background-color: #fff3e0; padding: 15px; border-radius: 5px; border: 1px solid #ffcc80;">
-                        <p><strong>🆔 ID do Cliente:</strong> {user_id}</p>
-                        <p><strong>📝 Motivo Identificado:</strong> {reason}</p>
+                        <p><strong> ID do Cliente:</strong> {user_id}</p>
+                        <p><strong> Motivo Identificado:</strong> {reason}</p>
                     </div>
 
                     <h3 style="margin-top: 20px;">📜 Histórico da Conversa</h3>
@@ -248,7 +248,7 @@ class SendEmailTool(BaseTool):
                     <hr>
                     
                     <p style="font-size: 12px; color: #777;">
-                        Enviado automaticamente pelo <b>InfinitePay Agent Swarm 🐝</b>
+                        Enviado automaticamente pelo <b>InfinitePay Agent Swarm </b>
                     </p>
                 </body>
             </html>
