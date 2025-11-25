@@ -2,6 +2,7 @@ import os
 from dotenv import load_dotenv
 from crewai import Agent, Task, Crew, LLM
 from crewai.tools import BaseTool
+import json
 from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from supabase import create_client, Client
 from crewai_tools import SerperDevTool
@@ -73,12 +74,9 @@ class TransactionStatusTool(BaseTool):
             res = supabase.table("transactions").select("*").eq("user_id", user_id).order("date", desc=True).limit(3).execute()
             
             if not res.data:
-                return "Nenhuma transação encontrada para este usuário."
+                return json.dumps({"status": "no_data", "message": "Nenhuma transação encontrada."}, indent=2)
             
-            report = "--- HISTÓRICO RECENTE DE TRANSAÇÕES ---\n"
-            for t in res.data:
-                report += f"Data: {t['date']} | Valor: {t['amount']} | Status: {t['status']} | Motivo: {t.get('reason_failure', '-')}\n"
-            return report
+            return json.dumps(res.data, indent=2, default=str)
         except Exception as e:
             return f"Erro DB: {e}"
 
@@ -155,11 +153,12 @@ class DelegateToSupportTool(BaseTool):
         
         agent = Agent(
             role='Support Specialist',
-            goal='Diagnosticar o problema com base nos dados do banco.',
+            goal='Ler os dados brutos (JSON) e relatar EXATAMENTE a quantidade de itens encontrados.',
             backstory=(
-                "Você é o suporte técnico nível 2. "
-                "Seja empático. Não use termos técnicos como 'insufficient_funds' sem explicar. "
-                "Diga 'Saldo insuficiente'. Proteja os dados do cliente."
+                "Você é um auditor de dados. Você recebe um JSON bruto do banco de dados.\n"
+                "Sua regra absoluta: Se o JSON tem 1 item, você fala de 1 item.\n"
+                "Se o JSON tem 5 itens, você fala de 5 itens.\n"
+                "JAMAIS invente dados para preencher espaço. Seja fiel ao JSON."
             ),
             tools=[TransactionStatusTool(), AccountDetailsTool()],
             llm=llm,
@@ -167,12 +166,17 @@ class DelegateToSupportTool(BaseTool):
         )
         
         task = Task(
-            description=f"Analise a queixa '{question}' para o usuário ID '{user_id}'.",
+            description=(
+                f"O usuário '{user_id}' perguntou: '{question}'.\n"
+                "1. Chame a ferramenta de transações.\n"
+                "2. Você receberá uma lista em JSON (ex: `[{{...}}, {{...}}]`).\n"
+                "3. CONTE quantos objetos existem na lista.\n" # <--- Instrução de contagem
+                "4. Liste apenas esses objetos. Se a lista tiver apenas 1, liste apenas 1.\n"
+                "5. Explique o motivo de falhas se houver."
+            ),
             agent=agent,
             expected_output=(
-                "Uma resposta explicativa e humana para o cliente. "
-                "Explique o motivo do erro (baseado no histórico) e sugira solução. "
-                "Não mostre JSON."
+                "Um resumo falado fiel aos dados do JSON em MARKDOWN sem a formatação do JSON"
             )
         )
         

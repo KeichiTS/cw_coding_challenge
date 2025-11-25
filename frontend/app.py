@@ -13,8 +13,15 @@ if "user_id" not in st.session_state:
     st.session_state.user_id = "client789"
 user_id_input = st.sidebar.text_input("User ID", value=st.session_state.user_id)
 st.session_state.user_id = user_id_input
-st.sidebar.info(f"Conectado como: `{st.session_state.user_id}`")
+if "active_session" not in st.session_state:
+    st.session_state.active_session = "chat_001"
+    
+session_input = st.sidebar.text_input("Session ID", value=st.session_state.active_session)
 
+if session_input != st.session_state.active_session:
+    st.session_state.messages = []
+    st.session_state.active_session = session_input
+    st.rerun()
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
