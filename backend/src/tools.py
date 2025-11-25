@@ -242,7 +242,7 @@ class SendEmailTool(BaseTool):
                         <p><strong> Motivo Identificado:</strong> {reason}</p>
                     </div>
 
-                    <h3 style="margin-top: 20px;">📜 Histórico da Conversa</h3>
+                    <h3 style="margin-top: 20px;"> Histórico da Conversa</h3>
                     <hr>
                     {history_html}
                     <hr>
