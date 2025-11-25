@@ -6,6 +6,7 @@ st.set_page_config(page_title="InfinitePay Agent Swarm", page_icon="https://www.
 st.title("InfinitePay Agent Swarm")
 
 API_URL = os.getenv("API_URL", "http://localhost:8000/api/chat") 
+HISTORY_URL = API_URL.replace("/chat", "/history")
 
 st.sidebar.header("Simulação de Cliente")
 
@@ -13,15 +14,44 @@ if "user_id" not in st.session_state:
     st.session_state.user_id = "client789"
 user_id_input = st.sidebar.text_input("User ID", value=st.session_state.user_id)
 st.session_state.user_id = user_id_input
+
 if "active_session" not in st.session_state:
     st.session_state.active_session = "chat_001"
     
 session_input = st.sidebar.text_input("Session ID", value=st.session_state.active_session)
 
-if session_input != st.session_state.active_session:
-    st.session_state.messages = []
+if st.sidebar.button("Load / Update Session"):
+        
     st.session_state.active_session = session_input
+    
+    st.session_state.messages = []
+    
+    try:
+        params = {"user_id": st.session_state.user_id}
+        
+        resp = requests.get(f"{HISTORY_URL}/{session_input}", params=params)
+        
+        if resp.status_code == 200:
+            history_data = resp.json()
+            
+            new_messages = []
+            for log in history_data:
+                role = "user" if log["direction"] == "user" else "assistant"
+                new_messages.append({"role": role, "content": log["message"]})
+            
+            st.session_state.messages = new_messages
+            
+            if not history_data:
+                st.toast("Nenhum histórico encontrado para esta sessão.", icon="📭")
+            else:
+                st.toast("Histórico carregado com sucesso!", icon="✅")
+        else:
+            st.error(f"Erro ao buscar histórico: {resp.status_code}")
+    except Exception as e:
+        st.error(f"Erro de conexão: {e}")
+    
     st.rerun()
+    
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
@@ -38,7 +68,8 @@ if prompt := st.chat_input("Digite sua dúvida ou problema..."):
             try:
                 payload = {
                     "message": prompt,
-                    "user_id": st.session_state.user_id 
+                    "user_id": st.session_state.user_id,
+                    "session_id": st.session_state.active_session
                 }
                 
                 response = requests.post(API_URL, json=payload)
