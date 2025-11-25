@@ -18,61 +18,95 @@ USER QUERY
 ▼
 [FastAPI Backend]
 │
-▼
+├── [SECURITY GUARDRAILS] (Input Filter) ──────►  Blocked (Competitors/ unsafe)
+│        │
+│        ▼ (If Safe)
+│
 [ROUTER AGENT] (Agent 1)
 │
 ├── Intent: Information? ───────────────────> [DelegateToKnowledge Tool]
-│                                                   │
-│                                           (Spins up Knowledge Crew)
 │                                                   │
 │                                           [KNOWLEDGE AGENT] (Agent 2)
 │                                                   │
 │                                   ┌───────────────┴───────────────┐
 │                                   │                               │
 │                           [InfinitePay RAG Tool]          [Web Search Tool]
-│                                   │                               │
 │                           (Supabase Vector Store)           (Serper Dev)
 │
-└── Intent: Support? ───────────────────────> [DelegateToSupport Tool]
+├── Intent: Support? ───────────────────────> [DelegateToSupport Tool]
+│                                                   │
+│                                           [SUPPORT AGENT] (Agent 3)
+│                                                   │
+│                                           ┌───────┴───────┐
+│                                           │               │
+│                                 [TransactionStatus]   [AccountDetails]
+│                                    (Supabase SQL)      (Supabase SQL)
+│
+└── Intent: Anger/Human? ───────────────────> [DelegateToEscalation Tool]
                                                     │
-                                            (Spins up Support Crew)
-                                                    │
-                                            [SUPPORT AGENT] (Agent 3)
+                                            [SEND MAIL AGENT] (Agent 4)
                                                     │
                                             ┌───────┴───────┐
                                             │               │
-                                  [TransactionStatus]   [AccountDetails]
-                                            │               │
-                                      (Supabase SQL)  (Supabase SQL)
+                                     [Fetch Chat Logs]  [SendEmail Tool]
+                                      (Supabase SQL)       (SMTP/Gmail)
 ```
 ### Agents Overview
 
-* **Router Agent:** The flow manager. It strictly performs intent classification and delegation. It does not access data directly.
-* **Knowledge Agent:** The product expert. Configured to answer in Markdown format using RAG (Retrieval Augmented Generation) for official documentation (vetorized) or Web Search for general facts.
-* **Support Agent:** The technical support specialist. It has read-only access to user data (SQL) to diagnose transaction failures and account status, translating technical errors into user-friendly language.
+| **Agent**        	| **Role**       	| **Responsibilities**                                                                 	| **Tools**                                                                        	|
+|------------------	|----------------	|--------------------------------------------------------------------------------------	|----------------------------------------------------------------------------------	|
+| Router Agent     	| Flow Manager   	| Intent classification and delegation. Acts as the "Hub".                             	| ```DelegateToKnowledge```,  ```DelegateToSupport```,  ```DelegateToEscalation``` 	|
+| Knowledge Agent  	| Product Expert 	| RAG (Vector Search), Web Search, and Markdown formatting.                            	| ```InfinitePayKnowledgeTool```,  ```WebSearchTool```                             	|
+| Support Agent    	| Tech Support   	| JSON data parsing, SQL querying, and empathetic translation of errors.               	| ```TransactionStatusTool```,  ```AccountDetailsTool```                           	|
+| Escalation Agent 	|                	| (Bonus) Handling frustrated users, summarizing chat history, and dispatching emails. 	| ```SendEmailTool```                                                              	|
 
-## RAG Pipeline Implementation
 
-The Knowledge Agent utilizes a RAG pipeline grounded in InfinitePay's official documentation.
+## Supabase Data Structure
 
-1.  **Ingestion:** Content was scraped from infinitepay.io using an n8n workflow.
-2.  **Embedding:** Text chunks were converted to vectors using `text-embedding-004`.
-3.  **Storage:** Vectors and metadata (source URLs) are stored in Supabase (PostgreSQL with `pgvector`).
-4.  **Retrieval:** The `InfinitePayKnowledgeTool` performs a cosine similarity search (`match_documents` RPC) to retrieve context before generation.
+The system relies on a PostgreSQL database managed by Supabase. Below is the schema structure used to support RAG, Transaction Logs, and Chat History.
+
+#### 1. Knowledge Base (RAG)
+- Table: documents
+- Usage: Stores scraped content from infinitepay.io for the Knowledge Agent.
+- Schema:
+  - `id`: primary key
+  - `content`: text (The chunk of information)
+  - `metadata`: jsonb (Contains source URL)
+  - `embedding`: vector(768) (Generated by Gemini text-embedding-004)
+ 
+ #### 2. User Data (Mock Bank)
+- Table: users & transactions
+- Usage: Accessed by the Support Agent to diagnose issues.
+- Schema:
+  - `users`: `user_id` (string), `name`, `email`, `account_status` (active/blocked).
+  - `transactions`: `id`, `user_id`, `amount`, `status` (approved/failed), `reason_failure`, `date`.
+
+#### 3. Chat Persistence (Memory & Handoff)
+
+- Table: chat_logs
+- Usage: Stores every interaction for frontend session reload and for the Escalation Agent to generate email summaries.
+- Schema:
+  - `id`: bigserial
+  - `session_id`: string (Links messages to a frontend session)
+  - `user_id`: string (Links messages to a user)
+  - `direction`: string ('user' or 'assistant')
+  - `message`: text (The actual content)
+  - `created_at`: timestamp
 
 ## Project Structure
 ```
-CW_CODING_CHALLENGE/
+cw_coding_challenge/
 ├── backend/
 │   ├── src/
 │   │   ├── agents.py       # Definition of Router, Knowledge, and Support agents
-│   │   ├── main.py         # FastAPI Entrypoint and Crew orchestration
+│   │   ├── guardrails.py   # Input filtering & Security logic
+│   │   ├── main.py         # FastAPI Entrypoint, Logger & Orchestrator
 │   │   ├── tasks.py        # Definition of Tasks and Decision Rules
-│   │   └── tools.py        # Custom Tools (RAG, SQL, Web, Delegation)
+│   │   └── tools.py        # Tools: RAG, SQL, Web, Email, Delegation Logic
 │   ├── Dockerfile          # Backend container configuration
 │   └── requirements.txt    # Python dependencies for backend
 ├── frontend/
-│   ├── app.py              # Streamlit User Interface
+│   ├── app.py              # Streamlit UI with Session State Management
 │   ├── Dockerfile          # Frontend container configuration
 │   └── requirements.txt    # Python dependencies for frontend
 ├── .dockerignore
@@ -82,11 +116,35 @@ CW_CODING_CHALLENGE/
 ├── pyproject.toml
 └── README.md
 ```
+
+## Bonus Features Detail
+
+#### 1. Email Human Handoff (**Agent 4**/Redirect Mechanism)
+
+This feature fulfills the "Redirect Mechanism" requirement.
+- Trigger: When the Router detects high sentiment (anger) or explicit keywords ("I need to speak to a human."), it triggers the `DelegateToEscalationTool`.
+- Action: The **Escalation Agent** spins up. It queries the `chat_logs` table in **Supabase** to retrieve the last 10 messages of context.
+- Output: It composes a professional HTML email summarizing the issue and the chat history, then sends it to the support team via SMTP (Gmail Integration).
+
+#### 2. Security Guardrails
+
+Implemented in `src/guardrails.py`. This layer sits before the Agent Swarm.
+- It intercepts every request to check for blacklisted keywords (Competitors like "Stone", "Cielo").
+- It blocks unsafe topics (Fraud, Hacking).
+- Benefit: Saves tokens and prevents the LLM from hallucinating on forbidden topics.
+
+#### 3. Conversation Persistence
+
+Unlike standard stateless bots, this solution implements session management.
+- Backend: The API exposes a `/history` endpoint.
+- Frontend: Streamlit enables users to switch `Session IDs`, instantly reloading previous conversations from the Supabase database.
+
 ## Setup & Execution
 
 ### Prerequisites
 * Docker & Docker Compose installed.
 * API Keys for **Google Gemini**, **Supabase**, and **Serper.dev**.
+* **Google Gmail** App Password (for Email feature).
 
 ### Configuration
 1.  Clone the repository.
@@ -97,7 +155,11 @@ GOOGLE_API_KEY=your_gemini_key
 SUPABASE_URL=your_supabase_url
 SUPABASE_KEY=your_supabase_anon_key
 SERPER_API_KEY=your_serper_key
-API_URL=http://backend:8000/api/chat
+
+# Email Configuration (Bonus)
+EMAIL_SENDER=your_email@gmail.com
+EMAIL_PASSWORD=your_app_password
+EMAIL_RECEIVER=support@test.com
 ```
 ____
 
@@ -114,10 +176,6 @@ Access the services:
 ## Testing Strategy
 
 The solution includes a Streamlit frontend specifically designed for integration testing, allowing the simulation of different user contexts via the sidebar.
-
-## Testing Strategy
-
-The solution includes a Streamlit frontend specifically designed for integration testing. Below are the verified outputs for the core requirements.
 
 ### Test Cases:
 
@@ -181,3 +239,6 @@ The solution includes a Streamlit frontend specifically designed for integration
 
     Para resolver o bloqueio da transação de R$ 50,00, por favor, entre em contato com nossa equipe de segurança.
     ```
+
+
+
